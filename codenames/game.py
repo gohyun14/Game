@@ -100,12 +100,20 @@ class Game:
         """Load stanford nlp glove vectors
         Original source that matches the function: https://nlp.stanford.edu/data/glove.6B.zip
         """
-        with open(glove_file_path, encoding="utf-8") as infile:
-            glove_vecs = {}
-            for line in infile:
-                line = line.rstrip().split(' ')
-                glove_vecs[line[0]] = np.array([float(n) for n in line[1:]])
-            return glove_vecs
+        if "cache" in glove_file_path:
+            with open(glove_file_path, "r") as infile:
+                data = json.load(infile)
+                print(len(data))
+                return data
+        else:
+            with open(glove_file_path, encoding="utf-8") as infile:
+                glove_vecs = {}
+                for line in infile:
+                    line = line.rstrip().split(' ')
+                    glove_vecs[line[0]] = np.array([float(n) for n in line[1:]])
+                print(len(glove_vecs))
+                return glove_vecs
+        
 
     @staticmethod
     def load_wordnet(wordnet_file):
@@ -117,7 +125,13 @@ class Game:
         """Function to initalize gensim w2v object from Google News w2v Vectors
         Vectors Source: https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM/edit
         """
-        return word2vec.KeyedVectors.load_word2vec_format(w2v_file_path, binary=True, unicode_errors='ignore')
+        if "cache" in w2v_file_path:
+            with open(w2v_file_path, "r") as infile:
+                data = json.load(infile)
+                print(len(data))
+                return data
+        else:
+            return word2vec.KeyedVectors.load_word2vec_format(w2v_file_path, binary=True, unicode_errors='ignore')
 
     def _display_board_codemaster(self):
         """prints out board with color-paired words, only for codemaster, color && stylistic"""

@@ -26,20 +26,24 @@ class AIGuesser(Guesser):
         return self.num > 0
 
     def get_answer(self):
-        sorted_words = self.compute_distance(self.clue, self.words)
+        cache =  len(self.word_vectors) < 400
+        sorted_words = self.compute_distance(self.clue, self.words, cache)
         print(f'guesses: {sorted_words}')
         self.num -= 1
         return sorted_words[0][1]
 
-    def compute_distance(self, clue, board):
+    def compute_distance(self, clue, board, cache):
         w2v = []
 
         for word in board:
             try:
                 if word[0] == '*':
                     continue
-                w2v.append((scipy.spatial.distance.cosine(self.word_vectors[clue],
-                                                          self.word_vectors[word.lower()]), word))
+                if cache:
+                    w2v.append((self.word_vectors[word.lower()][clue], word))
+                else:
+                    w2v.append((scipy.spatial.distance.cosine(self.word_vectors[clue],
+                                                            self.word_vectors[word.lower()]), word))
             except KeyError:
                 continue
 
