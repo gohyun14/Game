@@ -1,3 +1,4 @@
+from tkinter import W
 import numpy as np
 import scipy.spatial.distance
 import json
@@ -25,13 +26,28 @@ def run():
 
   all_vectors = (glove_vecs,)
 
-  word_dists = {}
+  # make cache using dictionary of dictionaries
+  dict_word_dists = {}
   for word in game_words:
-    word_dists[word] = {}
+    dict_word_dists[word] = {}
     for val in cm_wordlist:
       b_dist = cos_dist(concatenate(val, all_vectors), concatenate(word, all_vectors))
-      word_dists[word][val] = b_dist
+      dict_word_dists[word][val] = b_dist
 
+  # make cache using dictionary of lists, for sorted word distances
+  sorted_word_dists = {}
+  for word in game_words:
+    sorted_word_dists[word] = []
+    for val in cm_wordlist:
+      b_dist = cos_dist(concatenate(val, all_vectors), concatenate(word, all_vectors))
+      sorted_word_dists[word].append((val, b_dist))
+    sorted_word_dists[word] = sorted(sorted_word_dists[word], key = lambda x: x[1])
+    sorted_word_dists[word] = [tup[0] for tup in sorted_word_dists[word][1:]]
+
+  word_dists = {}
+  word_dists['dict_word_dists'] = dict_word_dists
+  word_dists['sorted_word_dists'] = sorted_word_dists
+  
   with open("cache_files/cache_glove_100d.txt", "a") as f:
     f.write(json.dumps(word_dists))
 

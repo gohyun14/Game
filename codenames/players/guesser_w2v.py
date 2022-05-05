@@ -40,10 +40,10 @@ class AIGuesser(Guesser):
                 if word[0] == '*':
                     continue
                 if cache:
-                    w2v.append((self.word_vectors[word.lower()][clue], word))
+                    w2v.append((self.word_vectors['dict_word_dists'][word.lower()][clue], word))
                 else:
-                    w2v.append((scipy.spatial.distance.cosine(self.word_vectors[clue],
-                                                            self.word_vectors[word.lower()]), word))
+                    w2v.append((scipy.spatial.distance.cosine(self.word_vectors['dict_word_dists'][clue],
+                                                            self.word_vectors['dict_word_dists'][word.lower()]), word))
             except KeyError:
                 continue
 
