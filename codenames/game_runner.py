@@ -27,7 +27,9 @@ class GameRunner:
     cm_kwargs = {"glove_vecs": glove_50d}
     g_kwargs = {"glove_vecs": glove_50d}
     Game(cm_glv_la, g_glv, seed=seed, do_print=True,  game_name="glv_la-glv", cm_kwargs=cm_kwargs, g_kwargs=g_kwargs).run()
-    print(f"{time.time() - start_time:.2f}s to play glove lookahead")
+    #Game(cm_glv_la, g_glv, seed=0, do_print=True,  game_name="glv_la-glv", cm_kwargs=cm_kwargs, g_kwargs=g_kwargs).run()
+    #Game(cm_glv_la, g_glv, seed=1, do_print=True,  game_name="glv_la-glv", cm_kwargs=cm_kwargs, g_kwargs=g_kwargs).run()
+    #print(f"{time.time() - start_time:.2f}s to play glove lookahead")
 
     # display the results
     print(f"\nfor seed {seed} ~")
