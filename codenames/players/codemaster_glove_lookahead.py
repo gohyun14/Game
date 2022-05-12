@@ -1,12 +1,13 @@
 import scipy.spatial.distance
 from nltk.stem import WordNetLemmatizer
 from nltk.stem.lancaster import LancasterStemmer
+from math import ceil
 import numpy as np
 import copy
 import itertools
 
 from players.codemaster import Codemaster
-
+THRESHOLD = np.inf
 
 class AICodemaster(Codemaster):
 
@@ -22,23 +23,33 @@ class AICodemaster(Codemaster):
             for line in infile:
                 self.cm_wordlist.append(line.rstrip())
         self.root = None
+        self.turn_number = 0
 
     def set_game_state(self, words, maps):
+        if self.turn_number == 0:
+            self.original_words = copy.copy(words)
+            print(f"original words: {self.original_words}")
         self.words = words
         self.maps = maps
-        self.red_words = []
-        self.bad_words = []
+        self.update_board()
+        self.init_dists()
+        self.turn_number += 1
+
+    def update_board(self):
+        self.red_words = set()
+        self.bad_words = set()
+        self.words_guessed = set()
         for i in range(25):
             if self.words[i][0] == '*':
-                continue
+                self.words_guessed.add(self.original_words[i].lower())
             elif self.maps[i] == "Assassin" or self.maps[i] == "Blue" or self.maps[i] == "Civilian":
-                self.bad_words.append(self.words[i].lower())
+                self.bad_words.add(self.words[i].lower())
                 if self.maps[i] == "Assassin":
-                    self.black_guessed = False
+                    self.black_word = self.words[i]
             else:
-                self.red_words.append(self.words[i].lower())
-
-
+                self.red_words.add(self.words[i].lower())
+    
+    def init_dists(self):
         cos_dist = scipy.spatial.distance.cosine
         all_vectors = (self.glove_vecs,)
         self.bad_word_dists = {}
@@ -56,17 +67,17 @@ class AICodemaster(Codemaster):
                 self.red_word_dists[word][val] = b_dist
 
     def get_clue(self):
-        if self.root is None or self.root.words != self.words:
+        #self.all_guesses = set()
+        if self.root is None or self.root.words_guessed != self.words_guessed:
             if self.root:
                 print("board mismatch: initializing new root")
-            self.root = Node(self, self.words, self.maps, None, depth = 0)
-        self.root.get_val(depth=3)
+                print(f"game's words guessed: {self.words_guessed} nodes' words guessed: {self.root.words_guessed}")
+            self.root = Node(self, copy.copy(self.words_guessed), None, depth = self.turn_number-1)
+        self.root.get_val()
         best_clue = self.root.best_clue
-        print("BESTS: ", self.root.children.keys())
         print('chosen_clue is:', best_clue[0])
 
-        self.root = self.root.best_child()
-        
+        self.root = self.root.best_child
         return best_clue
 
     def arr_not_in_word(self, word, arr):
@@ -98,37 +109,39 @@ class AICodemaster(Codemaster):
 
 
 class Node:
-    def __init__(self, codemaster, words, maps, parent, depth = 0):
+    def __init__(self, codemaster, words_guessed, parent, depth = 0, best=np.inf):
         self.codemaster = codemaster
-        self.words = words
-        self.maps = maps
+        self.words_guessed = words_guessed
         self.parent = parent
         self.depth = depth
         self.best_clue = None
-        self.children = {}
-        self.val = None
+        self.best_child = None
+        self.val = np.inf
         self.terminal = False
+        self.best = best
 
     def get_best_clues(self):
         bests = {}
         possible = {}
         cm = self.codemaster
+        red_words = cm.red_words.difference(self.words_guessed)
+        bad_words = cm.bad_words.difference(self.words_guessed)
         print(f"calculating best clues")
         #print(f"red word dists: {self.red_word_dists}")
         for clue_num in range(1, 3 + 1):
             best_per_dist = np.inf
             best_per = ''
             best_red_word = ''
-            for red_word in list(itertools.combinations(self.red_words, clue_num)):
+            for red_word in list(itertools.combinations(red_words, clue_num)):
                 best_word = ''
                 best_dist = np.inf
                 for word in cm.cm_wordlist:
-                    if not cm.arr_not_in_word(word, self.red_words + self.bad_words):
+                    if not cm.arr_not_in_word(word, red_words.union(bad_words)):
                         continue
 
                     bad_dist = np.inf
                     worst_bad = ''
-                    for bad_word in self.bad_words:
+                    for bad_word in bad_words:
                         if cm.bad_word_dists[bad_word][word] < bad_dist:
                             bad_dist = cm.bad_word_dists[bad_word][word]
                             worst_bad = bad_word
@@ -147,8 +160,8 @@ class Node:
                             best_per_dist = best_dist
                             best_per = best_word
                             best_red_word = red_word
-                if best_dist < np.inf:            
-                    possible[(best_word, clue_num)] = (red_word, best_per_dist)
+                if best_dist < THRESHOLD or clue_num == 1:            
+                    possible[(best_word, clue_num)] = (red_word, best_dist)
             bests[clue_num] = (best_red_word, best_per, best_per_dist)
         print(f"length of possibilities: {len(possible)}")
         return possible
@@ -173,73 +186,85 @@ class Node:
         
     def check_board(self):
         cm = self.codemaster
-        self.red_words = []
-        self.bad_words = []
-        self.black_guessed = True
-        cos_dist = scipy.spatial.distance.cosine
+        self.black_guessed = cm.black_word in self.words_guessed
+        red_words = cm.red_words.difference(self.words_guessed)
 
-        # Creates Red-Labeled Word arrays, and everything else arrays
-        for i in range(25):
-            if self.words[i][0] == '*':
-                continue
-            elif self.maps[i] == "Assassin" or self.maps[i] == "Blue" or self.maps[i] == "Civilian":
-                self.bad_words.append(self.words[i].lower())
-                if self.maps[i] == "Assassin":
-                    self.black_guessed = False
-            else:
-                self.red_words.append(self.words[i].lower())
-
-
-        red_count = len(self.red_words)
+        red_count = len(red_words)
         if self.black_guessed:
-            self.val = -1
+            self.val = np.inf
             self.terminal = True
         elif red_count == 0:
-            self.val = 26 - self.depth
+            self.val = self.depth
             self.terminal = True
+            print(f"Terminal Node: depth: {self.depth}")
         else:
-            self.val = 1 - red_count/8.0
+            self.val = 25
      
-    def add_child(self, clue, expected_words_chosen):
-        new_words = copy.copy(self.words)
-        new_maps = copy.copy(self.maps)
+    def new_child(self, expected_words_chosen):
+        new_words_guessed = copy.copy(self.words_guessed)
         for word in expected_words_chosen:
-            idx = self.words.index(word.upper())
-            new_words[idx] = f"*{self.maps[idx]}*"
-            new_maps[idx] = f"*{self.maps[idx]}*"
-        child_node = Node(self.codemaster, new_words, new_maps, self, self.depth + 1)
-        self.children[clue] = child_node
+            new_words_guessed.add(word)
+        return Node(self.codemaster, new_words_guessed, self, self.depth + 1, self.best)
         
     def get_val(self, depth=np.inf):
+        # if self.words_guessed in self.codemaster.all_guesses:
+        #     print("Board State already explored")
+        #     return self.val
+        # self.codemaster.all_guesses.add(self.words_guessed)
         self.check_board()
+        if self.not_possible():
+            print("Skipped")
+            return self.val
         if self.terminal:
+            if self.val < self.best:
+                self.best = self.val
             return self.val
-        else:
-            if self.depth < depth and len(self.children) == 0:
-                self.add_children()
-            if len(self.children) > 0:
-                best_val = -np.inf
-                for (clue, child) in self.children.items():
-                    child_val = child.get_val(depth)
-                    print(f"clue: {clue} val: {child_val}")
-                    if child_val >= best_val:
-                        best_val = child_val
-                        self.best_clue = clue
-                self.val = best_val
+        if self.best_clue is not None:
             return self.val
+        best_val = np.inf
+        possible = self.get_best_clues()
+        for clue, clue_info in sorted(possible.items(), key = lambda x: (x[0][1],-x[1][1]), reverse=True):
+            combined_clue, clue_num = clue
+            best_red_word, combined_score = clue_info
+            if self.check_clue_feasible(clue_num, combined_score):
+                print(f"Exploring child, depth: {self.depth+1}, clue: {clue}, dist: {combined_score}")
+                child = self.new_child(best_red_word)
+                child_val = child.get_val(depth)
+                if child_val < best_val:
+                    best_val = child_val
+                    self.best_clue = clue
+                    self.best_child = child
+                if child.best < self.best:
+                    print(f"Found new best, prev: {self.best} new: {child.best}")
+                    self.best = child.best
+        self.val = best_val
+        return self.val
 
-    def best_child(self):
-        best_clue = self.best_clue
-        for child_key in self.children.keys():
-            if child_key == best_clue:
-                best_child = self.children[child_key]
-        best_child.reset_depth()
-        return best_child
-        
-    def reset_depth(self, depth = 0):
-        self.depth = depth
-        for child in self.children.values():
-            child.reset_depth(depth+1)
+    # def best_child(self):
+    #     best_clue = self.best_clue
+    #     for child_key in self.children.keys():
+    #         if child_key == best_clue:
+    #             best_child = self.children[child_key]
+    #     best_child.reset_depth()
+    #     return best_child
+
+    def not_possible(self):
+        red_words = self.codemaster.red_words.difference(self.words_guessed)
+        best_possible = self.depth + ceil(len(red_words)/3)
+        print(f"BEST POSSIBLE: {best_possible}")
+        return self.best <= best_possible or self.depth >= self.best or (not self.terminal and self.depth == self.best - 1)
+
+    def check_clue_feasible(self, clue_num, combined_score):
+        return clue_num == 1 or combined_score < THRESHOLD
+        # cos_dist = scipy.spatial.distance.cosine
+        # cm = self.codemaster
+        # all_vectors = (cm.glove_vecs,)
+        # worst = -np.inf
+        # for word in best_red_word:
+        #    dist = cos_dist(cm.concatenate(word, all_vectors), cm.concatenate(combined_clue, all_vectors))
+        #    if dist > worst:
+        #        worst = dist
+        # return worst < 0.7 and worst != -np.inf or clue_num == 1
 
 
         
