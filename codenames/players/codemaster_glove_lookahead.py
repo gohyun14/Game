@@ -7,7 +7,11 @@ import copy
 import itertools
 
 from players.codemaster import Codemaster
+<<<<<<< HEAD
 THRESHOLD =  0.7 #np.inf
+=======
+THRESHOLD = 0.7
+>>>>>>> 94fa78e (added two player)
 
 class AICodemaster(Codemaster):
 

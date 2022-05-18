@@ -31,7 +31,7 @@ class Guesser(ABC):
 class HumanGuesser(Guesser):
     """Guesser derived class for human interaction"""
 
-    def __init__(self):
+    def __init__(self, brown_ic=None, glove_vecs=None, word_vectors=None):
         super().__init__()
         pass
 
