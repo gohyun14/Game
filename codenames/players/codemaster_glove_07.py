@@ -45,21 +45,28 @@ class AICodemaster(Codemaster):
 
         all_vectors = (self.glove_vecs,)
         bests = {}
+        cache =  len(self.glove_vecs) < 400
 
         if not self.bad_word_dists:
             self.bad_word_dists = {}
             for word in bad_words:
-                self.bad_word_dists[word] = {}
-                for val in self.cm_wordlist:
-                    b_dist = cos_dist(self.concatenate(val, all_vectors), self.concatenate(word, all_vectors))
-                    self.bad_word_dists[word][val] = b_dist
+                if cache:
+                    self.bad_word_dists[word] = self.glove_vecs['dict_word_dists'][word]
+                else:
+                    self.bad_word_dists[word] = {}
+                    for val in self.cm_wordlist:
+                        b_dist = cos_dist(self.concatenate(val, all_vectors), self.concatenate(word, all_vectors))
+                        self.bad_word_dists[word][val] = b_dist
 
             self.red_word_dists = {}
             for word in red_words:
-                self.red_word_dists[word] = {}
-                for val in self.cm_wordlist:
-                    b_dist = cos_dist(self.concatenate(val, all_vectors), self.concatenate(word, all_vectors))
-                    self.red_word_dists[word][val] = b_dist
+                if cache:
+                    self.red_word_dists[word] = self.glove_vecs['dict_word_dists'][word]
+                else: 
+                    self.red_word_dists[word] = {}
+                    for val in self.cm_wordlist:
+                        b_dist = cos_dist(self.concatenate(val, all_vectors), self.concatenate(word, all_vectors))
+                        self.red_word_dists[word][val] = b_dist
 
         else:
             to_remove = set(self.bad_word_dists) - set(bad_words)
@@ -76,31 +83,66 @@ class AICodemaster(Codemaster):
             for red_word in list(itertools.combinations(red_words, clue_num)):
                 best_word = ''
                 best_dist = np.inf
-                for word in self.cm_wordlist:
-                    if not self.arr_not_in_word(word, red_words + bad_words):
-                        continue
+                # get intersection of top 100 words from each red word to use as list of possible hint words
+                all_top_n_words = [self.glove_vecs['sorted_word_dists'][red][:200] for red in red_word]
+                if clue_num == 1:
+                    possible_words = all_top_n_words[0]
+                else:
+                    possible_words = all_top_n_words[0]
+                    for i in range(1, clue_num):
+                        possible_words = [value for value in possible_words if value in all_top_n_words[i]]
+                if cache:
+                    for word in possible_words:
+                        if not self.arr_not_in_word(word, red_words + bad_words):
+                            continue
 
-                    bad_dist = np.inf
-                    worst_bad = ''
-                    for bad_word in self.bad_word_dists:
-                        if self.bad_word_dists[bad_word][word] < bad_dist:
-                            bad_dist = self.bad_word_dists[bad_word][word]
-                            worst_bad = bad_word
-                    worst_red = 0
-                    for red in red_word:
-                        dist = self.red_word_dists[red][word]
-                        if dist > worst_red:
-                            worst_red = dist
+                        bad_dist = np.inf
+                        worst_bad = ''
+                        for bad_word in self.bad_word_dists:
+                            if self.bad_word_dists[bad_word][word] < bad_dist:
+                                bad_dist = self.bad_word_dists[bad_word][word]
+                                worst_bad = bad_word
+                        worst_red = 0
+                        for red in red_word:
+                            dist = self.red_word_dists[red][word]
+                            if dist > worst_red:
+                                worst_red = dist
 
-                    if worst_red < best_dist and worst_red < bad_dist:
-                        best_dist = worst_red
-                        best_word = word
-                        # print(worst_red,red_word,word)
+                        if worst_red < best_dist and worst_red < bad_dist:
+                            best_dist = worst_red
+                            best_word = word
+                            # print(worst_red,red_word,word)
 
-                        if best_dist < best_per_dist:
-                            best_per_dist = best_dist
-                            best_per = best_word
-                            best_red_word = red_word
+                            if best_dist < best_per_dist:
+                                best_per_dist = best_dist
+                                best_per = best_word
+                                best_red_word = red_word
+                else:
+                    for word in self.cm_wordlist:
+                        if not self.arr_not_in_word(word, red_words + bad_words):
+                            continue
+
+                        bad_dist = np.inf
+                        worst_bad = ''
+                        for bad_word in self.bad_word_dists:
+                            if self.bad_word_dists[bad_word][word] < bad_dist:
+                                bad_dist = self.bad_word_dists[bad_word][word]
+                                worst_bad = bad_word
+                        worst_red = 0
+                        for red in red_word:
+                            dist = self.red_word_dists[red][word]
+                            if dist > worst_red:
+                                worst_red = dist
+
+                        if worst_red < best_dist and worst_red < bad_dist:
+                            best_dist = worst_red
+                            best_word = word
+                            # print(worst_red,red_word,word)
+
+                            if best_dist < best_per_dist:
+                                best_per_dist = best_dist
+                                best_per = best_word
+                                best_red_word = red_word
             bests[clue_num] = (best_red_word, best_per, best_per_dist)
 
         print("BESTS: ", bests)
@@ -114,7 +156,10 @@ class AICodemaster(Codemaster):
             best = np.inf
             worst_word = ''
             for word in best_red_word:
-                dist = cos_dist(self.concatenate(word, all_vectors), self.concatenate(combined_clue, all_vectors))
+                if cache:
+                    dist = self.glove_vecs['dict_word_dists'][word][combined_clue]
+                else:
+                    dist = cos_dist(self.concatenate(word, all_vectors), self.concatenate(combined_clue, all_vectors))
                 if dist > worst:
                     worst_word = word
                     worst = dist

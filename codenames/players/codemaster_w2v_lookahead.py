@@ -51,12 +51,12 @@ class AICodemaster(Codemaster):
     
     def init_dists(self):
         cos_dist = scipy.spatial.distance.cosine
-        all_vectors = (self.glove_vecs,)
-        cache =  len(self.glove_vecs) < 400
+        all_vectors = (self.word_vectors,)
+        cache =  len(self.word_vectors) < 400
         self.bad_word_dists = {}
         for word in self.bad_words:
             if cache:
-                    self.bad_word_dists[word] = self.glove_vecs['dict_word_dists'][word]
+                    self.bad_word_dists[word] = self.word_vectors['dict_word_dists'][word]
             else:
                 self.bad_word_dists[word] = {}
                 for val in self.cm_wordlist:
@@ -66,7 +66,7 @@ class AICodemaster(Codemaster):
         self.red_word_dists = {}
         for word in self.red_words:
             if cache:
-                    self.red_word_dists[word] = self.glove_vecs['dict_word_dists'][word]
+                    self.red_word_dists[word] = self.word_vectors['dict_word_dists'][word]
             else:
                 self.red_word_dists[word] = {}
                 for val in self.cm_wordlist:
@@ -142,10 +142,10 @@ class Node:
             for red_word in list(itertools.combinations(red_words, clue_num)):
                 best_word = ''
                 best_dist = np.inf
-                cache =  len(cm.glove_vecs) < 400
+                cache =  len(cm.word_vectors) < 400
 
                 # get intersection of top X words from each red word to use as list of possible hint words
-                all_top_n_words = [cm.glove_vecs['sorted_word_dists'][red][:200] for red in red_word]
+                all_top_n_words = [cm.word_vectors['sorted_word_dists'][red][:200] for red in red_word]
                 if clue_num == 1:
                     possible_words = all_top_n_words[0]
                 else:
@@ -215,7 +215,7 @@ class Node:
     def add_children(self):
         cos_dist = scipy.spatial.distance.cosine
         cm = self.codemaster
-        all_vectors = (cm.glove_vecs,)
+        all_vectors = (cm.word_vectors,)
         print(f"at depth {self.depth}")
         bests = self.get_best_clues()
         for clue, clue_info in bests.items():
