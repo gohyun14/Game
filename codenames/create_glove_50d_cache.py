@@ -7,7 +7,7 @@ def run():
   cos_dist = scipy.spatial.distance.cosine
   #load glove vectors
   glove_vecs = {}
-  with open('players/glove.6B.100d.txt', encoding="utf-8") as infile:
+  with open('players/glove.6B.50d.txt', encoding="utf-8") as infile:
     for line in infile:
       line = line.rstrip().split(' ')
       glove_vecs[line[0]] = np.array([float(n) for n in line[1:]])
@@ -48,7 +48,7 @@ def run():
   word_dists['dict_word_dists'] = dict_word_dists
   word_dists['sorted_word_dists'] = sorted_word_dists
   
-  with open("cache_files/cache_glove_100d.txt", "a") as f:
+  with open("cache_files/cache_glove_50d.txt", "a") as f:
     f.write(json.dumps(word_dists))
 
 def concatenate(word, wordvecs):
