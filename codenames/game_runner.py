@@ -14,7 +14,7 @@ class GameRunner:
     """Example of how to share vectors, pass kwargs, and call Game directly instead of by terminal"""
 
     start_time = time.time()
-    glove_50d = Game.load_glove_vecs("players/glove.6B.50d.txt")
+    glove_50d = Game.load_glove_vecs("cache_files/cache_glove_50d.txt")
     print(f"{time.time() - start_time:.2f}s to load glove50d")
 
     print("\nclearing results folder...\n")

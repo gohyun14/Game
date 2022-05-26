@@ -258,8 +258,8 @@ class GameTwoPlayer:
         with open("results/bot_results_two_player.txt", "a") as f:
             f.write(
                 f'TOTAL:{num_of_turns} C:{civ_result} A:{assa_result}'
-                f' R:{red_result} CM:{type(self.red_codemaster).__name__} G:{type(self.red_guesser).__name__}'
-                f' B:{blue_result} CM:{type(self.blue_codemaster).__name__} G:{type(self.blue_guesser).__name__}'
+                f' R:{red_result} CM:{self.red_codemaster.name} G:{self.red_guesser.name}'
+                f' B:{blue_result} CM:{self.blue_codemaster.name} G:{self.blue_guesser}'
                 f'SEED:{self.seed}\n'
             )
 
@@ -267,10 +267,10 @@ class GameTwoPlayer:
             results = {"game_name": self.game_name,
                        "total_turns": num_of_turns,
                        "R": red_result, "B": blue_result, "C": civ_result, "A": assa_result,
-                       "red_codemaster": type(self.red_codemaster).__name__,
-                       "red_guesser": type(self.red_guesser).__name__,
-                       "blue_codemaster": type(self.blue_codemaster).__name__,
-                       "blue_guesser": type(self.blue_guesser).__name__,
+                       "red_codemaster": self.red_codemaster.name,
+                       "red_guesser": self.red_guesser.name,
+                       "blue_codemaster": self.blue_codemaster.name,
+                       "blue_guesser": self.blue_guesser.name,
                        "winner": self.winner,
                        "seed": self.seed,
                        "time_s": (self.game_end_time - self.game_start_time),

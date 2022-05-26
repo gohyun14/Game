@@ -7,16 +7,13 @@ import copy
 import itertools
 
 from players.codemaster import Codemaster
-<<<<<<< HEAD
 THRESHOLD =  0.7 #np.inf
-=======
-THRESHOLD = 0.7
->>>>>>> 94fa78e (added two player)
 
 class AICodemaster(Codemaster):
 
     def __init__(self, brown_ic=None, glove_vecs=None, word_vectors=None):
         super().__init__()
+        self.name = "glove_lookahead"
         self.brown_ic = brown_ic
         self.glove_vecs = glove_vecs
         self.word_vectors = word_vectors
@@ -32,7 +29,7 @@ class AICodemaster(Codemaster):
     def set_game_state(self, words, maps):
         if self.turn_number == 0:
             self.original_words = copy.copy(words)
-            print(f"original words: {self.original_words}")
+            #print(f"original words: {self.original_words}")
         self.words = words
         self.maps = maps
         self.update_board()
@@ -80,9 +77,9 @@ class AICodemaster(Codemaster):
     def get_clue(self):
         #self.all_guesses = set()
         if self.root is None or self.root.words_guessed != self.words_guessed:
-            if self.root:
-                print("board mismatch: initializing new root")
-                print(f"game's words guessed: {self.words_guessed} nodes' words guessed: {self.root.words_guessed}")
+            #if self.root:
+                #print("board mismatch: initializing new root")
+                #print(f"game's words guessed: {self.words_guessed} nodes' words guessed: {self.root.words_guessed}")
             self.root = Node(self, copy.copy(self.words_guessed), None, depth = self.turn_number-1)
         self.root.get_val()
         best_clue = self.root.best_clue
@@ -137,7 +134,7 @@ class Node:
         cm = self.codemaster
         red_words = cm.red_words.difference(self.words_guessed)
         bad_words = cm.bad_words.difference(self.words_guessed)
-        print(f"calculating best clues")
+        #print(f"calculating best clues")
         #print(f"red word dists: {self.red_word_dists}")
         for clue_num in range(1, 3 + 1):
             best_per_dist = np.inf
@@ -213,14 +210,14 @@ class Node:
                 if best_dist < THRESHOLD or clue_num == 1:            
                     possible[(best_word, clue_num)] = (red_word, best_dist)
             bests[clue_num] = (best_red_word, best_per, best_per_dist)
-        print(f"length of possibilities: {len(possible)}")
+        #print(f"length of possibilities: {len(possible)}")
         return possible
 
     def add_children(self):
         cos_dist = scipy.spatial.distance.cosine
         cm = self.codemaster
         all_vectors = (cm.glove_vecs,)
-        print(f"at depth {self.depth}")
+        #print(f"at depth {self.depth}")
         bests = self.get_best_clues()
         for clue, clue_info in bests.items():
             combined_clue, clue_num = clue
@@ -231,7 +228,7 @@ class Node:
                 if dist > worst:
                     worst = dist
             if worst < 0.7 and worst != -np.inf or clue_num == 1:
-                print(f"adding clue: {clue}")
+                #print(f"adding clue: {clue}")
                 self.add_child(clue, best_red_word)
         
     def check_board(self):
@@ -246,7 +243,7 @@ class Node:
         elif red_count == 0:
             self.val = self.depth
             self.terminal = True
-            print(f"Terminal Node: depth: {self.depth}")
+            #print(f"Terminal Node: depth: {self.depth}")
         else:
             self.val = 25
      
@@ -263,7 +260,7 @@ class Node:
         # self.codemaster.all_guesses.add(self.words_guessed)
         self.check_board()
         if self.not_possible():
-            print("Skipped")
+            #print("Skipped")
             return self.val
         if self.terminal:
             if self.val < self.best:
@@ -277,7 +274,7 @@ class Node:
             combined_clue, clue_num = clue
             best_red_word, combined_score = clue_info
             if self.check_clue_feasible(clue_num, combined_score):
-                print(f"Exploring child, depth: {self.depth+1}, clue: {clue}, dist: {combined_score}")
+                #print(f"Exploring child, depth: {self.depth+1}, clue: {clue}, dist: {combined_score}")
                 child = self.new_child(best_red_word)
                 child_val = child.get_val(depth)
                 if child_val < best_val:
@@ -285,7 +282,7 @@ class Node:
                     self.best_clue = clue
                     self.best_child = child
                 if child.best < self.best:
-                    print(f"Found new best, prev: {self.best} new: {child.best}")
+                    #print(f"Found new best, prev: {self.best} new: {child.best}")
                     self.best = child.best
         self.val = best_val
         return self.val
